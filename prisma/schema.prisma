@@ -1,0 +1,214 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model user {
+  id String @id @default(uuid()) // kirim ke jwt
+
+  username String @unique
+  password String @db.VarChar(255)
+
+  name  String  @db.VarChar(20)
+  image String?
+  bio   String? @db.VarChar(100)
+
+  role               role?                @relation(fields: [role_id], references: [id])
+  role_id            Int?
+  anonymous          anonymous?
+  posts              post[]
+  comments           comment[]
+  notification       notification[]
+  jwt                jwt[]
+  group              group[]
+  group_member       group_member[]
+  group_invitation   group_invitation[]
+  group_join_request group_join_request[]
+  reply_comment      reply_comment[]
+}
+
+model post {
+  id        String @id @default(uuid())
+  public_id String @unique @default(uuid())
+
+  content String @db.VarChar(255)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  category    category @relation(fields: [category_id], references: [id])
+  category_id Int
+
+  user         user?      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user_id      String?
+  anonymous    anonymous? @relation(fields: [anonymous_id], references: [id], onDelete: Cascade)
+  anonymous_id String?
+
+  group_id String?
+  group    group?  @relation(fields: [group_id], references: [id], onDelete: Cascade)
+
+  reports      report[]
+  comments     comment[]
+  notification notification[]
+
+  tag_post tag_post[]
+}
+
+model category {
+  id   Int    @id @default(autoincrement())
+  name String
+
+  posts post[]
+}
+
+model role {
+  id   Int    @id @default(autoincrement())
+  name String @unique
+
+  users user[]
+}
+
+model anonymous {
+  id       String @id @default(uuid())
+  username String
+
+  user_id String @unique
+  user    user   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  post    post[]
+}
+
+model report {
+  id     Int    @id @default(autoincrement())
+  reason String
+
+  post    post   @relation(fields: [post_id], references: [id], onDelete: Cascade)
+  post_id String
+}
+
+model comment {
+  id   Int    @id @default(autoincrement())
+  text String
+
+  post    post   @relation(fields: [post_id], references: [id], onDelete: Cascade)
+  post_id String
+
+  user    user   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user_id String
+
+  reply_comment reply_comment[]
+
+  created_at   DateTime       @default(now())
+  updated_at   DateTime       @updatedAt
+
+  notification notification[]
+}
+
+model reply_comment {
+  id   Int    @id @default(autoincrement())
+  text String
+
+  comment    comment @relation(fields: [comment_id], references: [id], onDelete: Cascade)
+  comment_id Int
+
+  user    user   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user_id String
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+}
+
+model notification {
+  id String @id @default(uuid())
+
+  type    String // report, comment, mention, reply
+  is_read Boolean @default(false)
+
+  to_user String
+
+  user    user   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user_id String
+
+  post    post   @relation(fields: [post_id], references: [id], onDelete: Cascade)
+  post_id String
+
+  comment   comment? @relation(fields: [comment_id], references: [id])
+  comment_id Int?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+}
+
+model jwt {
+  id         String   @id @default(uuid())
+  expired_in DateTime
+  user       user     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user_id    String
+}
+
+model group {
+  id          String  @id @default(uuid())
+  public_id   String  @default(uuid())
+  name        String
+  description String
+  logo        String?
+
+  leader_id String
+  leader    user   @relation(fields: [leader_id], references: [id], onDelete: Cascade)
+
+  group_member       group_member[]
+  group_invitation   group_invitation[]
+  post               post[]
+  group_join_request group_join_request[]
+}
+
+model group_member {
+  id Int @id @default(autoincrement())
+
+  group    group  @relation(fields: [group_id], references: [id], onDelete: Cascade)
+  group_id String
+
+  user    user   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user_id String
+}
+
+model group_invitation {
+  id Int @id @default(autoincrement())
+
+  group    group  @relation(fields: [group_id], references: [id], onDelete: Cascade)
+  group_id String
+
+  user    user   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user_id String
+}
+
+model group_join_request {
+  id Int @id @default(autoincrement())
+
+  group    group  @relation(fields: [group_id], references: [id], onDelete: Cascade)
+  group_id String
+
+  user    user   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user_id String
+}
+
+model tag {
+  id Int @id @default(autoincrement())
+
+  name String @db.VarChar(100)
+
+  tag_post tag_post[]
+}
+
+model tag_post {
+  id Int @id @default(autoincrement())
+
+  tag    tag @relation(fields: [tag_id], references: [id], onDelete: Cascade)
+  tag_id Int
+
+  post    post   @relation(fields: [post_id], references: [id], onDelete: Cascade)
+  post_id String
+}
